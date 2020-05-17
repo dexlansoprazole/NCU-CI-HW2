@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>HW1</title>
+  <link href="./styles/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" href="styles/jquery.svg.css">
+  <link href="./styles/style.css" rel="stylesheet" type="text/css">
+</head>
+
+<body>
+  <div id="alert"></div>
+  <div class="container">
+    <div class="page-header">
+      <h1>CI HW1</h1>
+    </div>
+
+    <div class="row align-items-center">
+      <div class="col">
+        <div class="input-group">
+          <div class="input-group-prepend">
+              <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                Case
+              </button>
+              <div id="dropdown-menu-case" class="dropdown-menu">
+              </div>
+          </div>
+          <div class="custom-file">
+            <input type="file" class="custom-file-input inputFile" id="inputFile-case">
+            <label class="custom-file-label" id="inputFile-label-case">case01.txt</label>
+          </div>
+        </div>
+      </div>
+      <div class="col-2">
+        <button id="btnStart" class="btn btn-primary btn-block" type="button">
+          Start
+        </button>
+      </div>
+    </div>
+
+    <div class="row align-items-center">
+        <div class="col">
+            <div class="input-group">
+                <div class="input-group-prepend">
+                    <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton"
+                        data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                        Save
+                    </button>
+                    <div id="dropdown-menu-save" class="dropdown-menu">
+                    </div>
+                </div>
+                <div class="custom-file">
+                    <input type="file" class="custom-file-input inputFile" id="inputFile-save">
+                    <label class="custom-file-label" id="inputFile-label-save"></label>
+                </div>
+            </div>
+        </div>
+        <div class="col-2">
+            <button id="btnPath" class="btn btn-secondary btn-block" type="button">
+                Path
+            </button>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col">
+            <h5>Sensors</h5>
+        </div>
+    </div>
+    <div class="row m-0" id='row-sensors'>
+        <div class="col">
+            <div class="input-group">
+                <div class="input-group-prepend">
+                    <div class="input-group-text">Left</div>
+                </div>
+                <input type="text" class="form-control bg-light" id="text-left-sensor" readonly>
+            </div>
+        </div>
+        <div class="col">
+            <div class="input-group">
+                <div class="input-group-prepend">
+                    <div class="input-group-text">Center</div>
+                </div>
+                <input type="text" class="form-control bg-light" id="text-center-sensor" readonly>
+            </div>
+        </div>
+        <div class="col">
+            <div class="input-group">
+                <div class="input-group-prepend">
+                    <div class="input-group-text">Right</div>
+                </div>
+                <input type="text" class="form-control bg-light" id="text-right-sensor" readonly>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col">
+            <h5>Step</h5>
+        </div>
+    </div>
+    <div class="row m-0">
+        <div class="col-1 d-flex align-items-center justify-content-center" id="col-range">
+            <h5 id="step" class='m-0'>1</h5>
+        </div>
+        <div class="col d-flex align-items-center p-0" id="col-range">
+            <input type="range" class="custom-range w-100" id="range" min="0">
+        </div>
+    </div>
+
+    <div class="row">
+      <div class="col" id="col-draw-result">
+        <svg id="draw-result"></svg>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    window.$ = window.jQuery = require('jquery');
+    require("./node_modules/bootstrap/dist/js/bootstrap.bundle.min.js");
+  </script>
+  <script type="text/javascript" src="./libs/jquery.svg.min.js"></script>
+  <script type="text/javascript" src="./libs/jquery.svganim.min.js"></script>
+  <script src="./ui.js"></script>
+</body>
+
+</html>

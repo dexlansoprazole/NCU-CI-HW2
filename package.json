@@ -1,0 +1,37 @@
+{
+  "name": "hw1",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron main.js",
+    "dev": "nodemon --watch * --exec electron --inspect=5858 .",
+    "dist": "electron-builder -w --x64"
+  },
+  "author": "108522055",
+  "license": "ISC",
+  "dependencies": {
+    "bootstrap": "^4.3.1",
+    "jquery": "^3.4.1",
+    "lodash": "^4.17.15",
+    "mathjs": "^7.0.0"
+  },
+  "devDependencies": {
+    "electron": "^6.1.9",
+    "electron-builder": "^21.2.0",
+    "electron-reload": "^1.5.0",
+    "nodemon": "^2.0.3"
+  },
+  "build": {
+    "appId": "hw1",
+    "win": {
+      "target": [
+        "portable"
+      ]
+    },
+    "extraFiles": [
+      "./case",
+      "./save"
+    ]
+  }
+}
