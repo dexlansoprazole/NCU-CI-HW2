@@ -1,5 +1,9 @@
-class RFBN {
-  constructor(neuron_count, opt_cfg = {iterations: 500, population_size: 1000, prob_mutation: 0.033, prob_crossover: 0.6}) {
+const {app} = require('electron');
+const fs = require('fs');
+const path = require('path'); 
+
+class RBFN {
+  constructor(neuron_count, opt_cfg = {iterations: 10000, population_size: 30, prob_mutation: 1, prob_crossover: 1}) {
     this.J = neuron_count;
     this.opt_cfg = opt_cfg;
     this.theta = 0;
@@ -8,7 +12,6 @@ class RFBN {
     this.sigma = new Array(this.J).fill(0.0);
     this.noise = 0.1;
     this.parant_rate = 0;
-    this.elite_rate = 0.5;
   }
 
   makeMatrix(I, J, fill) {
@@ -23,7 +26,7 @@ class RFBN {
   }
 
   gaussian(x, m, sigma) {
-    let l = x.map((v, i) => ((v - m[i]) ** 2));
+    let l = m.map((v, i) => ((x[i] - v) ** 2));
     let sum = l.reduce((a, b) => a + b);
     let res = Math.exp(-sum / (2 * sigma ** 2));
     return res;
@@ -101,25 +104,21 @@ class RFBN {
       population.forEach(c => {
         fitnesses.push(fitness_function(c));
       });
-      let reproduce_counts = fitnesses.map(v => Math.round(v / fitnesses.reduce((a, b) => a + b) * this.opt_cfg.population_size));
+      let reproduce_counts = fitnesses.map(v => {
+        return Math.round(v / fitnesses.reduce((a, b) => a + b) * this.opt_cfg.population_size);
+      });
+      // console.log(reproduce_counts.reduce((a, b) => a + b));
+      // console.log(Math.max(...reproduce_counts));
 
       // Fix reproduce count
-      let sum_reproduce_counts = reproduce_counts.reduce((a, b) => a + b);
-      if (sum_reproduce_counts > this.opt_cfg.population_size) {
-        for (let i = 0; i < sum_reproduce_counts - this.opt_cfg.population_size; i++){
-          for (let j = 0; j < reproduce_counts.length; j++) {
-            if (reproduce_counts[j] > 0) {
-              reproduce_counts[j] -= 1;
-              break;
-            }
-          }
-        }
+      while (reproduce_counts.reduce((a, b) => a + b) > this.opt_cfg.population_size) {
+        const j = Math.round(this.rand(0, reproduce_counts.length-1));
+        if (reproduce_counts[j] > 0)
+          reproduce_counts[j] -= 1;
       }
-      if (sum_reproduce_counts < this.opt_cfg.population_size) {
-        for (let i = 0; i < this.opt_cfg.population_size - sum_reproduce_counts; i++) {
-          const j = Math.round(this.rand(0, reproduce_counts.length));
-          reproduce_counts[j] += 1;
-        }
+      while (reproduce_counts.reduce((a, b) => a + b) < this.opt_cfg.population_size) {
+        const j = Math.round(this.rand(0, reproduce_counts.length-1));
+        reproduce_counts[j] += 1;
       }
 
       // Reproduction
@@ -131,9 +130,9 @@ class RFBN {
       });
 
       // Add noise
-      parents = parents.map(c => {
-        return this.rand(0, 1) < 0.5 ? c.map(v => v + this.rand(-this.noise, this.noise)) : c;
-      })
+      // parents = parents.map(c => {
+      //   return this.rand(0, 1) < 0.5 ? c.map(v => v + this.rand(-this.noise, this.noise)) : c;
+      // })
         
       // Crossover
       let offsprings = new Array();
@@ -145,30 +144,59 @@ class RFBN {
         ip2 = indexes.splice(ip2, 1)[0];
         let sigma = this.rand(-this.noise, this.noise);
         offsprings.push(parents[ip1].map((v, j) => {
-          return v + sigma * (v - parents[ip2][j]);
+          // return v + sigma * (v - parents[ip2][j]);
+          let r = this.rand(0, 1);
+          return (r <= this.opt_cfg.prob_crossover) ? parents[ip2][j] : v;
         }));
         if (offsprings.length === this.opt_cfg.population_size * (1 - this.parant_rate)) break;
         offsprings.push(parents[ip2].map((v, j) => {
-          return v + sigma * (v - parents[ip1][j]);
+          // return v + sigma * (v - parents[ip1][j]);
+          let r = this.rand(0, 1);
+          return (r <= this.opt_cfg.prob_crossover) ? parents[ip1][j] : v;
         }));
       }
 
       // Mutation
-      let mutation_count = Math.round(offsprings.length * this.opt_cfg.prob_mutation);
-      let indexes = [...Array(offsprings.length).keys()];
-      for (let i = 0; i < mutation_count; i++) {
-        let im = Math.round(this.rand(0, indexes.length - 1));
-        im = indexes.splice(im, 1)[0];
-        let ig = Math.round(this.rand(0, dim_x - 1));
-        offsprings[im][ig] = offsprings[im][ig] + 50 * this.rand(-this.noise, this.noise);
-      }
+      // let mutation_count = Math.round(offsprings.length * this.opt_cfg.prob_mutation);
+      // let indexes = [...Array(offsprings.length).keys()];
+      // for (let i = 0; i < mutation_count; i++) {
+      //   let im = Math.round(this.rand(0, indexes.length - 1));
+      //   im = indexes.splice(im, 1)[0];
+      //   let ig = Math.round(this.rand(0, dim_x - 1));
+      //   offsprings[im][ig] = offsprings[im][ig] + 50 * this.rand(-this.noise, this.noise);
+      // }
+
+      offsprings.map(c => {
+        let r = this.rand(0, 1);
+        let ig = Math.round(this.rand(0, c.length - 1));
+        if (r <= this.opt_cfg.prob_mutation){
+          // theta or w or m
+          if(ig >= 0 && ig < 1 + this.J + this.J * dim_x){
+            c[ig] = this.rand(-1, 1);
+          }
+          // sigma
+          if(ig >= 1 + this.J + this.J * dim_x && ig < c.length){
+            c[ig] = this.rand(0, 1);
+          }
+        }
+        return c;
+      });
+
 
       // Fit domain
       let population_next = offsprings;
       population_next = population_next.map(c => {
-        return c.map(g => {
-          if (g < -1) g = -1;
-          if (g > 1) g = 1;
+        return c.map((g, i, a) => {
+          // theta or w or m
+          if(i >= 0 && i < 1 + this.J + this.J * dim_x){
+            if (g < -1) g = -1;
+            if (g > 1) g = 1;
+          }
+          // sigma
+          if(i >= 1 + this.J + this.J * dim_x && i < a.length){
+            if (g < 0) g = 0;
+            if (g > 1) g = 1;
+          }
           return g;
         });
       });
@@ -210,8 +238,20 @@ class RFBN {
     result += theta;
     return result;
   }
+
+  save() {
+    let params = [this.theta];
+    this.w.forEach((w, i) => {
+      params.push((new Array()).concat(w, this.m[i], this.sigma[i]).join(' '));
+    });
+    params = params.join('\n');
+    let outputPath = app.isPackaged ? path.join(process.env.PORTABLE_EXECUTABLE_DIR, 'weights') : './weights';
+    if (!fs.existsSync(outputPath))
+      fs.mkdirSync(outputPath);
+    fs.writeFileSync(path.join(outputPath, 'RBFN_params.txt'), params);
+  }
 }
 
 module.exports = {
-  RFBN
+  RBFN
 }

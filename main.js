@@ -1,14 +1,14 @@
 const {app, BrowserWindow, Menu, ipcMain} = require('electron')
 const fs = require('fs'); 
 const path = require('path'); 
-if (!app.isPackaged)
-  require('electron-reload')(__dirname, {ignored: /outputs|[\/\\]\./});
+// if (!app.isPackaged)
+//   require('electron-reload')(__dirname, {ignored: /outputs|[\/\\]\./});
 const {fuzzyHandle} = require('./modules/fuzzy');
-const {RFBN} = require('./modules/RFBN');
+const {RBFN} = require('./modules/RBFN');
 
 let mainWindow;
 let data = null;
-let net = new RFBN(10);
+let net = new RBFN(15);
 
 function createWindow() {
   Menu.setApplicationMenu(null)
@@ -41,6 +41,7 @@ app.on('ready', function() {
   ipcMain.on('train', (evt, arg) => {
     let datas = parseDataSet(arg);
     net.fit(datas);
+    net.save();
     let res = start();
     mainWindow.webContents.send('start_res', res);
   })
@@ -129,7 +130,7 @@ function start(save = null) {
 
   let res = new Array();
   let sensors = getSensors(...Object.values(data.start));
-  let h = (net.predict(Object.values(sensors).map(v => v.val)) + 1) / 2 * 80 - 40;
+  let h = (net.predict(Object.values(sensors).map(v => v.val).concat(data.start.x, data.start.y)) + 1) / 2 * 80 - 40;
   res.push({...data.start, sensors, handle: save ? save[0] : h});
   for (let i = 1; i < (save ? save.length : 10000); i++){
     let {x, y} = res[res.length - 1];
@@ -148,7 +149,7 @@ function next(x, y, degree, handle, save) {
   y = y + Math.sin(radian + theta) - Math.cos(radian) * Math.sin(theta);
   radian = radian - Math.asin(2 * Math.sin(theta) / 6);
   let sensors = getSensors(x, y, toDegrees(radian));
-  let h = (net.predict(Object.values(sensors).map(v => v.val)) + 1) / 2 * 80 - 40;
+  let h = (net.predict(Object.values(sensors).map(v => v.val).concat(x, y)) + 1) / 2 * 80 - 40;
   console.log(h);
   
   return {x, y, degree: toDegrees(radian), sensors, handle: save != null ? save : h};
