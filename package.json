@@ -1,11 +1,11 @@
 {
-  "name": "hw1",
+  "name": "hw2",
   "version": "1.0.0",
   "description": "",
   "main": "main.js",
   "scripts": {
     "start": "electron main.js",
-    "dev": "nodemon --watch . --exec \"electron . --debug\"",
+    "dev": "nodemon --watch . --exec \"electron .\"",
     "dist": "electron-builder -w --x64"
   },
   "author": "108522055",
@@ -23,7 +23,7 @@
     "nodemon": "^2.0.3"
   },
   "build": {
-    "appId": "hw1",
+    "appId": "hw2",
     "win": {
       "target": [
         "portable"

@@ -3,8 +3,8 @@ const fs = require('fs');
 const path = require('path'); 
 
 class RBFN {
-  constructor(neuron_count, opt_cfg = {iterations: 10000, population_size: 30, prob_mutation: 1, prob_crossover: 1}) {
-    this.J = neuron_count;
+  constructor(neuron_count, opt_cfg = {iterations: 256, population_size: 128, prob_mutation: 1, prob_crossover: 1}) {
+    this.J = neuron_count; 
     this.opt_cfg = opt_cfg;
     this.theta = 0;
     this.w = new Array(this.J).fill(0.0);

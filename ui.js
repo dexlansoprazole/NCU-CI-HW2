@@ -5,6 +5,7 @@ const BLOCK_SIZE = 8;
 const PADDING = 100;
 var path_case = "./case";
 var path_save = "./save";
+var path_dataset = "./dataset";
 var data = null;
 var result = null;
 
@@ -18,15 +19,24 @@ document.addEventListener("keydown", function(e) {
 
 function readFile(filepath, filename) {
   $('#inputFile-label-case').html(filename);
-  $('#inputFile-label-save').html('');
+  $('#inputFile-label-load').html('');
   let fileString = fs.readFileSync(filepath, "UTF-8");
   ipcRenderer.send('input', {fileString});
 }
 
-function loadFile(filepath, filename) {
-  $('#inputFile-label-save').html(filename);
+function readTrain(filepath, filename) {
+  $('#inputFile-label-train').html(filename);
   let fileString = fs.readFileSync(filepath, "UTF-8");
-  ipcRenderer.send('load', {fileString});
+  $('#btnTrain').off('click');
+  $('#btnTrain').click(function() {
+    ipcRenderer.send('train', {fileString, mode: $('#select-mode').val()});
+  });
+}
+
+function loadFile(filepath, filename) {
+  $('#inputFile-label-load').html(filename);
+  let fileString = fs.readFileSync(filepath, "UTF-8");
+  ipcRenderer.send('load', {mode: $('#select-mode').val(), fileString});
 }
 
 function reset() {
@@ -196,11 +206,13 @@ ipcRenderer.on('input_res', function(evt, arg){
   console.log('data:', arg);
   data = arg;
   result = null;
-  // ipcRenderer.send('start');
+  ipcRenderer.send('create_dataset', $('#select-mode').val());
 });
 
 ipcRenderer.on('train_res', function(evt, arg) {
   console.log('train_set:', arg);
+  result = null;
+  ipcRenderer.send('start', $('#select-mode').val());
 });
 
 ipcRenderer.on('load_res', function(evt, arg) {
@@ -227,6 +239,8 @@ ipcRenderer.on('start_res', function(evt, arg) {
     return;
   console.log('result:', arg);
   result = arg;
+  $('#btnStart').removeClass('disabled');
+  $('#btnPath').removeClass('disabled');
   $('#range').attr('max', result.length - 1);
   $('#range').off('input');
   $('#range').on('input', evt => {
@@ -242,11 +256,13 @@ ipcRenderer.on('start_res', function(evt, arg) {
 });
 
 $('#btnStart').click(function () {
-  updateResult();
+  if(!$(this).hasClass('disabled'))
+    updateResult();
 });
 
 $('#btnPath').click(function() {
-  updateResult('path');
+  if(!$(this).hasClass('disabled'))
+    updateResult('path');
 });
 
 $('#inputFile-case').change(function () {
@@ -257,11 +273,36 @@ $('#inputFile-case').change(function () {
   }
 });
 
-$('#inputFile-save').change(function() {
+$('#inputFile-train').change(function() {
+  if ($(this).prop('files')[0]) {
+    let inputFile = $(this).prop('files')[0];
+    $(this).val('');
+    readTrain(inputFile.path, inputFile.name);
+    $('#btnStart').addClass('disabled');
+    $('#btnPath').addClass('disabled');
+  }
+});
+
+$('#inputFile-load').change(function() {
   if ($(this).prop('files')[0]) {
     let inputFile = $(this).prop('files')[0];
     $(this).val('');
     loadFile(inputFile.path, inputFile.name);
+  }
+});
+
+$('#select-mode').change(function() {
+  let mode = $('#select-mode').val();
+  $('#btnStart').addClass('disabled');
+  $('#btnPath').addClass('disabled');
+  switch (mode) {
+    case 'fuzzy':
+      $('#row-train').addClass('d-none');
+      ipcRenderer.send('start', $('#select-mode').val());
+      break;
+    default:
+      $('#row-train').removeClass('d-none');
+      break;
   }
 });
 
@@ -279,17 +320,32 @@ fs.readdir(path_case, function(err, items) {
 
 fs.readdir(path_save, function(err, items) {
   items.forEach(item => {
-    let $dropdown_item_save = $($.parseHTML('<a class="dropdown-item dropdown-item-save" href="#" filename="' + item + '" filepath="' + path.join(path_save, item) + '">' + item.slice(0, -4) + '</a>'));
-    $dropdown_item_save.click(function() {
+    let $dropdown_item_load = $($.parseHTML('<a class="dropdown-item dropdown-item-load" href="#" filename="' + item + '" filepath="' + path.join(path_save, item) + '">' + item.slice(0, -4) + '</a>'));
+    $dropdown_item_load.click(function() {
       let filename = $(this).attr('filename');
       let filepath = $(this).attr('filepath');
       loadFile(filepath, filename);
     });
-    $('#dropdown-menu-save').append($dropdown_item_save);
+    $('#dropdown-menu-load').append($dropdown_item_load);
+  });
+});
+
+fs.readdir(path_dataset, function(err, items) {
+  items.forEach(item => {
+    let $dropdown_item_train = $($.parseHTML('<a class="dropdown-item dropdown-item-train" href="#" filename="' + item + '" filepath="' + path.join(path_dataset, item) + '">' + item.slice(0, -4) + '</a>'));
+    $dropdown_item_train.click(function() {
+      let filename = $(this).attr('filename');
+      let filepath = $(this).attr('filepath');
+      readTrain(filepath, filename);
+      $('#btnStart').addClass('disabled');
+      $('#btnPath').addClass('disabled');
+    });
+    $('#dropdown-menu-train').append($dropdown_item_train);
   });
 });
 readFile('./case/case01.txt', 'case01.txt');
+readTrain('./dataset/train4dAll.txt', 'train4dAll.txt');
 
 // test
-let fileString = fs.readFileSync('./dataset/train4dAll.txt', "UTF-8");
-ipcRenderer.send('train', {fileString});
+// let fileString = fs.readFileSync('./dataset/train4dAll.txt', "UTF-8");
+// ipcRenderer.send('train', {fileString});

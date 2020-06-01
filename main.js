@@ -1,14 +1,15 @@
 const {app, BrowserWindow, Menu, ipcMain} = require('electron')
 const fs = require('fs'); 
 const path = require('path'); 
-// if (!app.isPackaged)
-//   require('electron-reload')(__dirname, {ignored: /outputs|[\/\\]\./});
-const {fuzzyHandle} = require('./modules/fuzzy');
+if (!app.isPackaged)
+  require('electron-reload')(__dirname, {ignored: [/outputs|[\/\\]\./, /weights|[\/\\]\./, /dataset|[\/\\]\./]});
+const {Fuzzy} = require('./modules/Fuzzy');
 const {RBFN} = require('./modules/RBFN');
 
 let mainWindow;
 let data = null;
-let net = new RBFN(15);
+let net = new RBFN(3);
+let fuzzy = new Fuzzy();
 
 function createWindow() {
   Menu.setApplicationMenu(null)
@@ -34,22 +35,45 @@ app.on('ready', function() {
 
   ipcMain.on('load', (evt, arg) => {
     let save = load(arg.fileString)
-    let res = start(save);
+    let res = start(arg.mode, save);
     mainWindow.webContents.send('load_res', res);
   })
 
   ipcMain.on('train', (evt, arg) => {
-    let datas = parseDataSet(arg);
+    let datas = parseDataSet(arg.fileString);
     net.fit(datas);
     net.save();
-    let res = start();
-    mainWindow.webContents.send('start_res', res);
+    mainWindow.webContents.send('train_res', datas);
   })
 
   ipcMain.on('start', (evt, arg) => {
-    let res = start();
-    save(res);
-    mainWindow.webContents.send('start_res', res);
+    let res = start(arg);
+    save(res.result);
+    mainWindow.webContents.send('start_res', res.result);
+  })
+
+  ipcMain.on('create_dataset', (evt, arg) => {
+    let data4D = new Array();
+    let data6D = new Array();
+    let count = 0;
+    for (let i = 0; i < 10; i++) {
+      sensor_length = {center: rand(3, 20), left: rand(3, 20), right: rand(3, 20)};
+      fuzzy = new Fuzzy(sensor_length);
+      let res = start(arg);
+      if(res.isFinished){
+        console.log(++count);
+        data4D.push(res.result.map(r => [r.sensors.center.val, r.sensors.right.val, r.sensors.left.val, r.handle].join(' ')).join('\n'));
+        data6D.push(res.result.map(r => [r.x, r.y, r.sensors.center.val, r.sensors.right.val, r.sensors.left.val, r.handle].join(' ')).join('\n'));
+      }
+      else
+        i--;
+    }
+    let outputPath = app.isPackaged ? path.join(process.env.PORTABLE_EXECUTABLE_DIR, 'dataset') : './dataset';
+    if (!fs.existsSync(outputPath))
+      fs.mkdirSync(outputPath);
+    fs.writeFileSync(path.join(outputPath, 'myTrain4DAll.txt'), data4D.join('\n'));
+    fs.writeFileSync(path.join(outputPath, 'myTrain6DAll.txt'), data6D.join('\n'));
+    mainWindow.webContents.send('create_dataset_res');
   })
 
   createWindow();
@@ -62,6 +86,10 @@ app.on('window-all-closed', function () {
 app.on('activate', function () {
   if (mainWindow === null) createWindow()
 })
+
+function rand(a, b) {
+  return (b - a) * Math.random() + a;
+}
 
 function parseData(arg) {
   let rawText = arg.fileString;
@@ -88,8 +116,7 @@ function parseData(arg) {
   return {start, finish, corners};
 }
 
-function parseDataSet(arg) {
-  let rawText = arg.fileString;
+function parseDataSet(rawText) {
   let lines = rawText.split("\n");
   let datas = lines.map(line => {
     line = line.split(' ').map(v => parseFloat(v));
@@ -117,7 +144,7 @@ function parseDataSet(arg) {
   return datas;
 }
 
-function start(save = null) {
+function start(mode = 'fuzzy', save = null) {
   if (!data)
     return null;
   let finishCorners = [
@@ -128,30 +155,48 @@ function start(save = null) {
     {x: data.finish.topLeft.x, y: data.finish.topLeft.y}
   ]
 
+  let isFinished = false;
   let res = new Array();
   let sensors = getSensors(...Object.values(data.start));
-  let h = (net.predict(Object.values(sensors).map(v => v.val).concat(data.start.x, data.start.y)) + 1) / 2 * 80 - 40;
+  let h = null;
+  switch (mode) {
+    case 'fuzzy':
+      h = fuzzy.fuzzyHandle(sensors);
+      break;
+    case 'gene':
+      h = (net.predict(Object.values(sensors).map(v => v.val).concat(data.start.x, data.start.y)) + 1) / 2 * 80 - 40;
+      break;
+  }
   res.push({...data.start, sensors, handle: save ? save[0] : h});
   for (let i = 1; i < (save ? save.length : 10000); i++){
     let {x, y} = res[res.length - 1];
     if (!save && isCollision(x, y, data.corners) && i !== 1) break;
-    if (!save && isCollision(x, y, finishCorners)) break;
+    if (!save && isCollision(x, y, finishCorners)) {
+      isFinished = true;
+      break;
+    }
     let prev = res[res.length - 1];
-    res.push(next(prev.x, prev.y, prev.degree, prev.handle, save ? save[i] : null));
+    res.push(next(mode, prev.x, prev.y, prev.degree, prev.handle, save ? save[i] : null));
   }
-  return res;
+  return {result: res, isFinished};
 }
 
-function next(x, y, degree, handle, save) {
+function next(mode, x, y, degree, handle, save) {
   let theta = toRadians(handle);
   let radian = toRadians(degree);
   x = x + Math.cos(radian + theta) + Math.sin(radian) * Math.sin(theta);
   y = y + Math.sin(radian + theta) - Math.cos(radian) * Math.sin(theta);
   radian = radian - Math.asin(2 * Math.sin(theta) / 6);
   let sensors = getSensors(x, y, toDegrees(radian));
-  let h = (net.predict(Object.values(sensors).map(v => v.val).concat(x, y)) + 1) / 2 * 80 - 40;
-  console.log(h);
-  
+  let h = null;
+  switch (mode) {
+    case 'fuzzy':
+      h = fuzzy.fuzzyHandle(sensors);
+      break;
+    case 'gene':
+      h = (net.predict(Object.values(sensors).map(v => v.val).concat(data.start.x, data.start.y)) + 1) / 2 * 80 - 40;
+      break;
+  }
   return {x, y, degree: toDegrees(radian), sensors, handle: save != null ? save : h};
 }
 

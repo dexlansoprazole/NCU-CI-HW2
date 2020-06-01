@@ -5,7 +5,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="ie=edge">
-  <title>HW1</title>
+  <title>HW2</title>
   <link href="./styles/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" type="text/css" href="styles/jquery.svg.css">
   <link href="./styles/style.css" rel="stylesheet" type="text/css">
@@ -15,7 +15,7 @@
   <div id="alert"></div>
   <div class="container">
     <div class="page-header">
-      <h1>CI HW1</h1>
+      <h1>CI HW2</h1>
     </div>
 
     <div class="row align-items-center">
@@ -34,35 +34,75 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <div class="row align-items-center">
+      <div class="col">
+        <div class="input-group">
+          <div class="input-group-prepend">
+              <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                Load
+              </button>
+              <div id="dropdown-menu-load" class="dropdown-menu">
+              </div>
+          </div>
+          <div class="custom-file">
+            <input type="file" class="custom-file-input inputFile" id="inputFile-load">
+            <label class="custom-file-label" id="inputFile-label-load"></label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="row align-items-center" id="row-mode">
+      <div class="col">
+        <div class="input-group">
+          <div class="input-group-prepend">
+            <label class="input-group-text" for="select-mode">Mode</label>
+          </div>
+          <select class="custom-select" id="select-mode">
+            <option value="fuzzy" selected>Fuzzy</option>
+            <option value="gene">Genetic Algorithm</option>
+            <option value="pso">PSO</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="row align-items-center d-none" id="row-train">
+      <div class="col">
+        <div class="input-group">
+          <div class="input-group-prepend">
+              <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                Train set
+              </button>
+              <div id="dropdown-menu-train" class="dropdown-menu">
+              </div>
+          </div>
+          <div class="custom-file">
+            <input type="file" class="custom-file-input inputFile" id="inputFile-train">
+            <label class="custom-file-label" id="inputFile-label-train"></label>
+          </div>
+        </div>
+      </div>
+      <div class="col-2">
+        <button id="btnTrain" class="btn btn-primary btn-block" type="button">
+          Train
+        </button>
+      </div>
+    </div>
+
+    <div class="row align-items-center justify-content-end">
+      <div class="col-2">
+        <button id="btnPath" class="btn btn-secondary btn-block" type="button">
+            Path
+        </button>
+      </div>
       <div class="col-2">
         <button id="btnStart" class="btn btn-primary btn-block" type="button">
           Start
         </button>
       </div>
-    </div>
-
-    <div class="row align-items-center">
-        <div class="col">
-            <div class="input-group">
-                <div class="input-group-prepend">
-                    <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton"
-                        data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                        Save
-                    </button>
-                    <div id="dropdown-menu-save" class="dropdown-menu">
-                    </div>
-                </div>
-                <div class="custom-file">
-                    <input type="file" class="custom-file-input inputFile" id="inputFile-save">
-                    <label class="custom-file-label" id="inputFile-label-save"></label>
-                </div>
-            </div>
-        </div>
-        <div class="col-2">
-            <button id="btnPath" class="btn btn-secondary btn-block" type="button">
-                Path
-            </button>
-        </div>
     </div>
 
     <div class="row">
