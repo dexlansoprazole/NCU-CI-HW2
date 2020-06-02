@@ -4,7 +4,7 @@ const path = require('path');
 const {GeneticOpt} = require('./GeneticOpt');
 
 class RBFN {
-  constructor(neuron_count, opt='genetic', opt_cfg = {iterations: 256, population_size: 512, prob_mutation: 1, prob_crossover: 0}) {
+  constructor(neuron_count, opt='genetic', opt_cfg = {iterations: 10, population_size: 512, prob_mutation: 1, prob_crossover: 0}) {
     this.J = neuron_count; 
     this.theta = 0;
     this.w = new Array(this.J).fill(0.0);

@@ -206,7 +206,7 @@ ipcRenderer.on('input_res', function(evt, arg){
   console.log('data:', arg);
   data = arg;
   result = null;
-  ipcRenderer.send('create_dataset', $('#select-mode').val());
+  ipcRenderer.send('start', $('#select-mode').val());
 });
 
 ipcRenderer.on('train_res', function(evt, arg) {
@@ -346,6 +346,4 @@ fs.readdir(path_dataset, function(err, items) {
 readFile('./case/case01.txt', 'case01.txt');
 readTrain('./dataset/train4dAll.txt', 'train4dAll.txt');
 
-// test
-// let fileString = fs.readFileSync('./dataset/train4dAll.txt', "UTF-8");
-// ipcRenderer.send('train', {fileString});
+ipcRenderer.send('start', $('#select-mode').val());
