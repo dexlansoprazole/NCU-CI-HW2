@@ -8,7 +8,7 @@ const {RBFN} = require('./modules/RBFN');
 
 let mainWindow;
 let data = null;
-let net = new RBFN(3);
+let rbfn = new RBFN(3);
 let fuzzy = new Fuzzy();
 
 function createWindow() {
@@ -41,8 +41,8 @@ app.on('ready', function() {
 
   ipcMain.on('train', (evt, arg) => {
     let datas = parseDataSet(arg.fileString);
-    net.fit(datas);
-    net.save();
+    rbfn.fit(datas);
+    rbfn.save();
     mainWindow.webContents.send('train_res', datas);
   })
 
@@ -56,8 +56,8 @@ app.on('ready', function() {
     let data4D = new Array();
     let data6D = new Array();
     let count = 0;
-    for (let i = 0; i < 10; i++) {
-      sensor_length = {center: rand(3, 20), left: rand(3, 20), right: rand(3, 20)};
+    for (let i = 0; i < 20; i++) {
+      sensor_length = {center: rand(5, 10), left: rand(10, 20), right: rand(10, 20)};
       fuzzy = new Fuzzy(sensor_length);
       let res = start(arg);
       if(res.isFinished){
@@ -161,10 +161,10 @@ function start(mode = 'fuzzy', save = null) {
   let h = null;
   switch (mode) {
     case 'fuzzy':
-      h = fuzzy.fuzzyHandle(sensors);
+      h = fuzzy.handle(sensors);
       break;
     case 'gene':
-      h = (net.predict(Object.values(sensors).map(v => v.val).concat(data.start.x, data.start.y)) + 1) / 2 * 80 - 40;
+      h = rbfn.handle(data.start.x, data.start.y, sensors);
       break;
   }
   res.push({...data.start, sensors, handle: save ? save[0] : h});
@@ -191,10 +191,10 @@ function next(mode, x, y, degree, handle, save) {
   let h = null;
   switch (mode) {
     case 'fuzzy':
-      h = fuzzy.fuzzyHandle(sensors);
+      h = fuzzy.handle(sensors);
       break;
     case 'gene':
-      h = (net.predict(Object.values(sensors).map(v => v.val).concat(data.start.x, data.start.y)) + 1) / 2 * 80 - 40;
+      h= rbfn.handle(x, y, sensors);
       break;
   }
   return {x, y, degree: toDegrees(radian), sensors, handle: save != null ? save : h};
