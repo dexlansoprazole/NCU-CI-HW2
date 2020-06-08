@@ -2,6 +2,7 @@ const {app} = require('electron');
 const fs = require('fs');
 const path = require('path');
 const {GeneticOpt} = require('./GeneticOpt');
+const {ParticalSwarmOpt} = require('./ParticalSwarmOpt');
 
 class RBFN {
   constructor(neuron_count, opt='genetic', opt_cfg) {
@@ -11,11 +12,11 @@ class RBFN {
     this.m = new Array(this.J);
     this.sigma = new Array(this.J).fill(0.0);
     switch (opt) {
-      case 'genetic':
+      case 'gene':
         this.optimizer = new GeneticOpt(opt_cfg, this.predict, neuron_count);
         break;
       case 'pso':
-        this.optimizer = new GeneticOpt(opt_cfg, this.predict, neuron_count);
+        this.optimizer = new ParticalSwarmOpt(opt_cfg, this.predict, neuron_count);
         break;
     }
   }

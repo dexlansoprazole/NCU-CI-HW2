@@ -1,5 +1,5 @@
 class GeneticOpt{
-  constructor(cfg = {iterations: 256, population_size: 128, prob_mutation: 1, prob_crossover: 1, elite: 1}, predict, J) {
+  constructor(cfg = {iter: 256, population_size: 512, prob_mutation: 1, prob_crossover: 1, elite: 1}, predict, J) {
     this.cfg = cfg;
     this.predict = predict;
     this.J = J;
@@ -64,7 +64,7 @@ class GeneticOpt{
     
     // Main loop
     let best = {c: null, mse: 1};
-    for (let iter = 0; iter < this.cfg.iterations; iter++){
+    for (let iter = 0; iter < this.cfg.iter; iter++){
       // Selection
       let fitnesses = new Array();
       population.forEach(c => {

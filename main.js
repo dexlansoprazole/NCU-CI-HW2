@@ -8,7 +8,7 @@ const {RBFN} = require('./modules/RBFN');
 
 let mainWindow;
 let data = null;
-let rbfn = new RBFN(3);
+let rbfn = null;
 let fuzzy = new Fuzzy();
 
 function createWindow() {
@@ -41,6 +41,7 @@ app.on('ready', function() {
 
   ipcMain.on('train', (evt, arg) => {
     let datas = parseDataSet(arg.fileString);
+    rbfn = new RBFN(3, arg.mode);
     rbfn.fit(datas);
     rbfn.save();
     mainWindow.webContents.send('train_res', datas);
@@ -166,6 +167,9 @@ function start(mode = 'fuzzy', save = null) {
     case 'gene':
       h = rbfn.handle(data.start.x, data.start.y, sensors);
       break;
+    case 'pso':
+      h = rbfn.handle(data.start.x, data.start.y, sensors);
+      break;
   }
   res.push({...data.start, sensors, handle: save ? save[0] : h});
   for (let i = 1; i < (save ? save.length : 10000); i++){
@@ -195,6 +199,9 @@ function next(mode, x, y, degree, handle, save) {
       break;
     case 'gene':
       h= rbfn.handle(x, y, sensors);
+      break;
+    case 'pso':
+      h = rbfn.handle(x, y, sensors);
       break;
   }
   return {x, y, degree: toDegrees(radian), sensors, handle: save != null ? save : h};
