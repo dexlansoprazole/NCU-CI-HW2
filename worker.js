@@ -1,5 +1,4 @@
 const ipcRenderer = require('electron').ipcRenderer;
-const logger = require('./modules/logger');
 const {RBFN} = require('./modules/RBFN');
 window.onerror = function(error, url, line) {
   ipcRenderer.send('error', error);

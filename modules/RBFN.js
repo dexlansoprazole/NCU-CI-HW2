@@ -1,6 +1,3 @@
-const {app} = require('electron');
-const fs = require('fs');
-const path = require('path');
 const {GeneticOpt} = require('./GeneticOpt');
 const {ParticalSwarmOpt} = require('./ParticalSwarmOpt');
 
@@ -27,24 +24,63 @@ class RBFN {
   }
 
   normalization(dataset) {
+    // dataset = dataset.map(data => {
+    //   let x = data.x;
+    //   let y = data.y;
+    //   const dim_x = x.length;
+    //   if (dim_x === 3) {
+    //     x = x.map(v => (v / 4105 ** 0.5 * 2 - 1));
+    //   }
+    //   if (dim_x === 5) {
+    //     x = x.map((v, i) => {
+    //       if (i === 0)
+    //         return ((v + 6) / 36 * 2 - 1);
+    //       else if (i === 1)
+    //         return ((v + 3) / 53 * 2 - 1);
+    //       else
+    //         return (v / 4105 ** 0.5 * 2 - 1);
+    //     });
+    //   }
+    //   y = (y + 40) / 80 * 2 - 1;
+    //   return {x, y};
+    // })
+    let dim_x = dataset[0].x.length;
+    let maxs_x = new Array(dim_x).fill(-Infinity);
+    let mins_x = new Array(dim_x).fill(Infinity);
+    let avgs_x = new Array(dim_x).fill(0);
+    let max_y = -Infinity;
+    let min_y = Infinity;
+    let avg_y = 0;
+    if (dim_x === 3) {
+      avg_y = -0.22901084745762695
+      avgs_x = [18.08846766101695, 12.619113694915251, 12.939964610169515]
+      max_y = 40
+      maxs_x = [33.5245, 40.1364, 36.7269]
+      min_y = -40
+      mins_x = [8.306, 4.6436, 4.8617]
+    }
+    else if (dim_x === 5) {
+      avg_y = -0.22901084745762695
+      avgs_x = [
+        13.466855593220322,
+        17.745421966101706,
+        18.08846766101695,
+        12.619113694915251,
+        12.939964610169515
+      ]
+      max_y = 40
+      maxs_x = [26.5484, 37.9961, 33.5245, 40.1364, 36.7269]
+      min_y = -40
+      mins_x = [-0.1449, 0, 8.306, 4.6436, 4.8617]
+    }
+
+
     dataset = dataset.map(data => {
       let x = data.x;
       let y = data.y;
-      const dim_x = x.length;
-      if (dim_x === 3) {
-        x = x.map(v => (v / 4105 ** 0.5 * 2 - 1));
-      }
-      if (dim_x === 5) {
-        x = x.map((v, i) => {
-          if (i === 0)
-            return ((v + 6) / 36 * 2 - 1);
-          else if (i === 1)
-            return ((v + 3) / 53 * 2 - 1);
-          else
-            return (v / 4105 ** 0.5 * 2 - 1);
-        });
-      }
-      y = (y + 40) / 80 * 2 - 1;
+      x = x.map((v, i) => (v - avgs_x[i]) / (maxs_x[i] - mins_x[i]));
+
+      y = (y - avg_y) / (max_y - min_y);
       return {x, y};
     })
     return dataset;
@@ -91,18 +127,52 @@ class RBFN {
   handle(x, y, sensors) {
     // Normalization
     const dim_x = this.m[0].length;
+    let maxs_x = new Array(dim_x).fill(-Infinity);
+    let mins_x = new Array(dim_x).fill(Infinity);
+    let avgs_x = new Array(dim_x).fill(0);
+    let max_y = -Infinity;
+    let min_y = Infinity;
+    let avg_y = 0;
+    if (dim_x === 3) {
+      avg_y = -0.22901084745762695
+      avgs_x = [18.08846766101695, 12.619113694915251, 12.939964610169515]
+      max_y = 40
+      maxs_x = [33.5245, 40.1364, 36.7269]
+      min_y = -40
+      mins_x = [8.306, 4.6436, 4.8617]
+    }
+    else if (dim_x === 5) {
+      avg_y = -0.22901084745762695
+      avgs_x = [
+        13.466855593220322,
+        17.745421966101706,
+        18.08846766101695,
+        12.619113694915251,
+        12.939964610169515
+      ]
+      max_y = 40
+      maxs_x = [26.5484, 37.9961, 33.5245, 40.1364, 36.7269]
+      min_y = -40
+      mins_x = [-0.1449, 0, 8.306, 4.6436, 4.8617]
+    }
+
     sensors = [sensors.center.val, sensors.right.val, sensors.left.val];
-    sensors = sensors.map(v => (v / 4105 ** 0.5 * 2 - 1));
-    x = ((x + 6) / 36 * 2 - 1);
-    y = ((y + 3) / 53 * 2 - 1);
+    // sensors = sensors.map(v => (v / 4105 ** 0.5 * 2 - 1));
+    // x = ((x + 6) / 36 * 2 - 1);
+    // y = ((y + 3) / 53 * 2 - 1);
     
     let data = null;
     if (dim_x === 3) {
-      data = sensors.slice();
+      // data = sensors.slice();
+      data = sensors.map((v, i) => (v - avgs_x[i]) / (maxs_x[i] - mins_x[i]));
     }
     else if (dim_x === 5) {
       data = [x, y].concat(sensors);
+      data = data.map((v, i) => (v - avgs_x[i]) / (maxs_x[i] - mins_x[i]));
     }
+
+    // return this.predict(Object.values(sensors).map(v => v.val).concat(x, y));
+    return this.predict(data) * (max_y - min_y) + avg_y;
     return (this.predict(data) + 1) / 2 * 80 - 40;
   }
 }
