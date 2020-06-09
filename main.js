@@ -1,4 +1,4 @@
-const {app, BrowserWindow, Menu, ipcMain} = require('electron')
+const {app, BrowserWindow, Menu, ipcMain, globalShortcut, dialog} = require('electron')
 const fs = require('fs'); 
 const path = require('path'); 
 if (!app.isPackaged)
@@ -6,8 +6,9 @@ if (!app.isPackaged)
 const {Fuzzy} = require('./modules/Fuzzy');
 const {RBFN} = require('./modules/RBFN');
 
-let mainWindow;
+let mainWindow, workerWindow;
 let data = null;
+let result = null;
 let rbfn = null;
 let fuzzy = new Fuzzy();
 
@@ -22,35 +23,103 @@ function createWindow() {
   if (!app.isPackaged)
     mainWindow.webContents.openDevTools()
   
-  mainWindow.on('closed', function () {
+  workerWindow = new BrowserWindow({
+    show: false,
+    webPreferences: {nodeIntegration: true},
+  });
+  workerWindow.loadFile('worker.html');
+
+  globalShortcut.register('f5', function() {
+    mainWindow.reload();
+    workerWindow.close();
+    workerWindow = new BrowserWindow({
+      show: false,
+      webPreferences: {nodeIntegration: true},
+    });
+    workerWindow.loadFile('worker.html');
+  })
+
+  mainWindow.on('closed', function() {
     mainWindow = null;
+    if (workerWindow != null)
+      workerWindow.close();
+  })
+
+  workerWindow.on('closed', () => {
+    workerWindow = null;
   })
 }
 
 app.on('ready', function() {
+  ipcMain.on('log', (evt, arg) => {
+    console.log(...arg);
+    mainWindow.webContents.send('log', arg);
+  })
+
+  ipcMain.on('error', (evt, arg) => {
+    console.error(arg);
+    mainWindow.webContents.send('error', arg);
+  })
+
   ipcMain.on('input', (evt, arg) => {
     data = parseData(arg)
     mainWindow.webContents.send('input_res', data);
   })
 
-  ipcMain.on('load', (evt, arg) => {
-    let save = load(arg.fileString)
+  ipcMain.on('savePath4D', (evt, arg) => {
+    let data4D = result.map(r => [r.sensors.center.val, r.sensors.right.val, r.sensors.left.val, r.handle].join(' ')).join('\n');
+    let defaultPath = '*/train4D.txt';
+    let outputPath = dialog.showSaveDialogSync(mainWindow, {defaultPath});
+    if (outputPath)
+      fs.writeFileSync(path.join(outputPath), data4D);
+  })
+
+  ipcMain.on('savePath6D', (evt, arg) => {
+    let data6D = result.map(r => [r.x, r.y, r.sensors.center.val, r.sensors.right.val, r.sensors.left.val, r.handle].join(' ')).join('\n');
+    let defaultPath = '*/train6D.txt';
+    let outputPath = dialog.showSaveDialogSync(mainWindow, {defaultPath});
+    if (outputPath)
+      fs.writeFileSync(path.join(outputPath), data6D);
+  })
+
+  ipcMain.on('loadPath', (evt, arg) => {
+    let lines = arg.fileString.split("\n");
+    let save = lines.map(l => {
+      let d = l.trim().split(' ').map(v => parseFloat(v))
+      return d[d.length - 1];
+    });
     let res = start(arg.mode, save);
-    mainWindow.webContents.send('load_res', res);
+    mainWindow.webContents.send('load_res', res.result);
+  })
+
+  ipcMain.on('saveParams', (evt, arg) => {
+    let params = rbfn.getParams(); 
+    let defaultPath = '*/RBFN_params.txt';
+    let outputPath = dialog.showSaveDialogSync(mainWindow, {defaultPath});
+    if (outputPath)
+      fs.writeFileSync(outputPath, params);
+  })
+
+  ipcMain.on('loadParams', (evt, arg) => {
+    let params = parseParams(arg.fileString);
+    rbfn = new RBFN(params.w.length, undefined, undefined, params);
+    mainWindow.webContents.send('loadParams_res', {params});
   })
 
   ipcMain.on('train', (evt, arg) => {
-    let datas = parseDataSet(arg.fileString);
-    rbfn = new RBFN(3, arg.mode);
-    rbfn.fit(datas);
-    rbfn.save();
-    mainWindow.webContents.send('train_res', datas);
+    workerWindow.webContents.send('train', {mode: arg.mode, J: arg.J, opt_cfg: arg.opt_cfg, dataset: parseDataset(arg.fileString)});
+  })
+
+  ipcMain.on('train_res', (evt, arg) => {
+    let params = parseParams(arg.params);
+    rbfn = new RBFN(arg.J, undefined, undefined, params);
+    mainWindow.webContents.send('train_res', {params});
   })
 
   ipcMain.on('start', (evt, arg) => {
     let res = start(arg);
-    save(res.result);
-    mainWindow.webContents.send('start_res', res.result);
+    result = res.result;
+    mainWindow.webContents.send('start_res', result);
   })
 
   ipcMain.on('create_dataset', (evt, arg) => {
@@ -117,32 +186,30 @@ function parseData(arg) {
   return {start, finish, corners};
 }
 
-function parseDataSet(rawText) {
+function parseDataset(rawText) {
   let lines = rawText.split("\n");
   let datas = lines.map(line => {
     line = line.split(' ').map(v => parseFloat(v));
     let y = line.pop();
     let x = line.slice();
-
-    // Normalization
-    const dim_x = x.length;
-    if (dim_x === 3) {
-      x = x.map(v => (v / 4105 ** 0.5 * 2 - 1));
-    }
-    if (dim_x === 5) {
-      x = x.map((v, i) => {
-        if (i === 0)
-          return ((v + 6) / 36 * 2 - 1);
-        else if (i === 1)
-          return ((v + 3) / 53 * 2 - 1);
-        else
-          return (v / 4105 ** 0.5 * 2 - 1);
-      });
-    }
-    y = (y + 40) / 80 * 2 - 1;
     return {x, y};
   });
   return datas;
+}
+
+function parseParams(rawText) {
+  let lines = rawText.split("\n");
+  let theta = parseFloat(lines.shift());
+  let w = [];
+  let m = [];
+  let sigma = [];
+  lines.forEach(line => {
+    line = line.split(' ').map(v => parseFloat(v));
+    w.push(line.shift());
+    sigma.push(line.pop());
+    m.push(line);
+  });
+  return {theta, w, m, sigma};
 }
 
 function start(mode = 'fuzzy', save = null) {
@@ -333,7 +400,7 @@ function getSensorRes(x, y, sensors) {
         intersects.push(itst);
     });
     distances = intersects.map(i => ((x - i.x) ** 2 + (y - i.y) ** 2) ** 0.5);
-    reses.push(Math.min(...distances) - 3);
+    reses.push(Math.min(...distances));
   });
   return reses;
 }
@@ -401,22 +468,4 @@ function intersect(p1, q1, p2, q2)
   }
 
   return res; // Doesn't fall in any of the above cases 
-}
-
-function save(result) {
-  let data4D = result.map(r => [r.sensors.center.val, r.sensors.right.val, r.sensors.left.val, r.handle].join(' ')).join('\n');
-  let data6D = result.map(r => [r.x, r.y, r.sensors.center.val, r.sensors.right.val, r.sensors.left.val, r.handle].join(' ')).join('\n');
-  let outputPath = app.isPackaged ? path.join(process.env.PORTABLE_EXECUTABLE_DIR, 'outputs') : './outputs';
-  if (!fs.existsSync(outputPath))
-    fs.mkdirSync(outputPath);
-  fs.writeFileSync(path.join(outputPath, 'train4D.txt'), data4D);
-  fs.writeFileSync(path.join(outputPath, 'train6D.txt'), data6D);
-}
-
-function load(save) {
-  let lines = save.split("\n");
-  return lines.map(l => {
-    let d = l.trim().split(' ').map(v => parseFloat(v))
-    return d[d.length - 1];
-  });
 }

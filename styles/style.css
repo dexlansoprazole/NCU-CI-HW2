@@ -48,6 +48,11 @@ svg{
     z-index:9999;
 }
 
-button.disabled{
+.btn{
+    cursor: pointer;
+}
+
+button.disabled, label.disabled{
     cursor: not-allowed !important;
+    pointer-events: none;
 }

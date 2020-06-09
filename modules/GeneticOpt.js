@@ -1,5 +1,8 @@
+const logger = require('./logger');
+const {performance} = require('perf_hooks');
+
 class GeneticOpt{
-  constructor(cfg = {iter: 256, population_size: 512, prob_mutation: 1, prob_crossover: 1, elite: 1}, predict, J) {
+  constructor(cfg = {iter: 10, population_size: 512, prob_mutation: 1, prob_crossover: 1, elite: 1}, predict, J) {
     this.cfg = cfg;
     this.predict = predict;
     this.J = J;
@@ -20,7 +23,7 @@ class GeneticOpt{
     return {theta, w, m, sigma};
   }
   
-  mse(chromosome, data_set) {
+  me(chromosome, data_set) {
     const dim_x = data_set[0].x.length;
     chromosome = this.parse_chromosome(chromosome, dim_x);
 
@@ -46,7 +49,8 @@ class GeneticOpt{
     return 1 / (sum / 2);
   }
 
-  train(train_set){
+  train(train_set) {
+    let t0 = performance.now();
     const dim_x = train_set[0].x.length;
 
     // Initialize
@@ -63,7 +67,7 @@ class GeneticOpt{
     });
     
     // Main loop
-    let best = {c: null, mse: 1};
+    let best = {c: null, me: Infinity};
     for (let iter = 0; iter < this.cfg.iter; iter++){
       // Selection
       let fitnesses = new Array();
@@ -84,15 +88,15 @@ class GeneticOpt{
       }
 
       // Fix reproduce count
-      // while (reproduce_counts.reduce((a, b) => a + b) > this.cfg.population_size) {
-      //   const j = Math.round(this.rand(0, reproduce_counts.length-1));
-      //   if (reproduce_counts[j] > 0)
-      //     reproduce_counts[j] -= 1;
-      // }
-      // while (reproduce_counts.reduce((a, b) => a + b) < this.cfg.population_size) {
-      //   const j = Math.round(this.rand(0, reproduce_counts.length-1));
-      //   reproduce_counts[j] += 1;
-      // }
+      while (reproduce_counts.reduce((a, b) => a + b) > this.cfg.population_size) {
+        const j = Math.round(this.rand(0, reproduce_counts.length-1));
+        if (reproduce_counts[j] > 0)
+          reproduce_counts[j] -= 1;
+      }
+      while (reproduce_counts.reduce((a, b) => a + b) < this.cfg.population_size) {
+        const j = Math.round(this.rand(0, reproduce_counts.length-1));
+        reproduce_counts[j] += 1;
+      }
 
       // Reproduction
       let parents = new Array();
@@ -101,11 +105,6 @@ class GeneticOpt{
           parents.push(population[i]);
         }
       });
-
-      // Add noise
-      // parents = parents.map(c => {
-      //   return this.rand(0, 1) < 0.5 ? c.map(v => v + this.rand(-this.noise, this.noise)) : c;
-      // })
         
       // Crossover
       let offsprings = new Array();
@@ -130,26 +129,7 @@ class GeneticOpt{
       }
 
       // Mutation
-      // let mutation_count = Math.round(offsprings.length * this.cfg.prob_mutation);
-      // let indexes = [...Array(offsprings.length).keys()];
-      // for (let i = 0; i < mutation_count; i++) {
-      //   let im = Math.round(this.rand(0, indexes.length - 1));
-      //   im = indexes.splice(im, 1)[0];
-      //   let ig = Math.round(this.rand(0, dim_x - 1));
-      //   offsprings[im][ig] = offsprings[im][ig] + 50 * this.rand(-this.noise, this.noise);
-      // }
-
       offsprings = offsprings.map(c => {
-        // let r = this.rand(0, 1);
-        // let ig = Math.round(this.rand(0, c.length - 1));
-        // if (r <= this.cfg.prob_mutation){
-        //   // theta or w or m
-        //   if(ig >= 0 && ig < 1 + this.J + this.J * dim_x)
-        //     c[ig] = this.rand(-1, 1);
-        //   // sigma
-        //   if(ig >= 1 + this.J + this.J * dim_x && ig < c.length)
-        //     c[ig] = this.rand(0, 1);
-        // }
         c = c.map((g, ig) => {
           let r = this.rand(0, 1);
           if (r <= this.cfg.prob_mutation) {
@@ -185,19 +165,19 @@ class GeneticOpt{
       });
 
       let results = population_next.map(c => {
-        let mse = this.mse(c, train_set);
-        if (mse < best.mse) best = {c, mse};
-        return {c, mse};
+        let me = this.me(c, train_set);
+        if (me < best.me) best = {c, me: me};
+        return {c, me: me};
       });
-      console.log('-------------------------------------------------\nloss:\t' + (1 / Math.max(...fitnesses.map(o => o.fitness))));
-      console.log('mse:\t' + Math.min(...results.map(r => r.mse)));
-      console.log('parant count: ' + parents.length + '\toffspring count: ' + offsprings.length);
-      
-      
+      logger(
+        '-------------------------------------------------\nloss:\t' + (1 / Math.max(...fitnesses.map(o => o.fitness))) + '\n' + 
+        'mean error:\t' + Math.min(...results.map(r => r.me)) + '\n' + 
+        'parant count: ' + parents.length + '\toffspring count: ' + offsprings.length);
       population = population_next.slice();
     }
-
-    console.log('best mse: ' + best.mse);
+    let t1 = performance.now();
+    logger('best mean error: ' + best.me);
+    logger('time: ' + (t1 - t0) / 1000 + ' sec');
 
     // Parse chromosome
     return this.parse_chromosome(best.c, dim_x);

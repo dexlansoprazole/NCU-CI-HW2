@@ -4,7 +4,6 @@ const fs = require('fs');
 const BLOCK_SIZE = 8;
 const PADDING = 100;
 var path_case = "./case";
-var path_save = "./save";
 var path_dataset = "./dataset";
 var data = null;
 var result = null;
@@ -19,7 +18,6 @@ document.addEventListener("keydown", function(e) {
 
 function readFile(filepath, filename) {
   $('#inputFile-label-case').html(filename);
-  $('#inputFile-label-load').html('');
   let fileString = fs.readFileSync(filepath, "UTF-8");
   ipcRenderer.send('input', {fileString});
 }
@@ -29,14 +27,33 @@ function readTrain(filepath, filename) {
   let fileString = fs.readFileSync(filepath, "UTF-8");
   $('#btnTrain').off('click');
   $('#btnTrain').click(function() {
-    ipcRenderer.send('train', {fileString, mode: $('#select-mode').val()});
+    $('#btnTrain').addClass('disabled');
+    $('#btnTrain').html('<span class="spinner-border spinner-border-sm"></span>');
+    $('#btnSaveParams').addClass('disabled');
+    $('#btnLoadParams').addClass('disabled');
+    ipcRenderer.send('train', {
+      fileString,
+      mode: $('#select-mode').val(),
+      J: parseInt($('#cfg-j').val()),
+      opt_cfg: {
+        iter: parseInt($('#cfg-iter').val()),
+        population_size: parseInt($('#cfg-size').val()),
+        prob_mutation: parseFloat($('#cfg-mutate').val()),
+        prob_crossover: parseFloat($('#cfg-crossover').val()),
+        elite: 1
+      }
+    });
   });
 }
 
-function loadFile(filepath, filename) {
-  $('#inputFile-label-load').html(filename);
+function loadPath(filepath, filename) {
   let fileString = fs.readFileSync(filepath, "UTF-8");
-  ipcRenderer.send('load', {mode: $('#select-mode').val(), fileString});
+  ipcRenderer.send('loadPath', {mode: $('#select-mode').val(), fileString});
+}
+
+function loadParams(filepath, filename) {
+  let fileString = fs.readFileSync(filepath, "UTF-8");
+  ipcRenderer.send('loadParams', {fileString});
 }
 
 function reset() {
@@ -44,11 +61,16 @@ function reset() {
   $('#text-left-sensor').val(null);
   $('#text-center-sensor').val(null);
   $('#text-right-sensor').val(null);
+  $('.row-sensors').addClass('d-none');
+  $('.row-step').addClass('d-none');
 }
 
 function updateResult(mode = 'animate') {
   if (data == null) return;
-  reset();
+  $('#draw-result').empty();
+  $('#text-left-sensor').val(null);
+  $('#text-center-sensor').val(null);
+  $('#text-right-sensor').val(null);
 
   let svg = $('#draw-result').svg('get');
   let min = {
@@ -202,6 +224,14 @@ function getCoordinate(x, y, offset, svg) {
   return [PADDING + offset.x + x * BLOCK_SIZE, $(svg.root()).height() - (PADDING + offset.y + y * BLOCK_SIZE)];
 }
 
+ipcRenderer.on('log', function(evt, arg) {
+  console.log(...arg);
+});
+
+ipcRenderer.on('error', function(evt, arg) {
+  console.error(arg);
+});
+
 ipcRenderer.on('input_res', function(evt, arg){
   console.log('data:', arg);
   data = arg;
@@ -210,7 +240,11 @@ ipcRenderer.on('input_res', function(evt, arg){
 });
 
 ipcRenderer.on('train_res', function(evt, arg) {
-  console.log('train_set:', arg);
+  console.log(arg);
+  $('#btnTrain').removeClass('disabled');
+  $('#btnTrain').html('Train');
+  $('#btnSaveParams').removeClass('disabled');
+  $('#btnLoadParams').removeClass('disabled');
   result = null;
   ipcRenderer.send('start', $('#select-mode').val());
 });
@@ -220,26 +254,7 @@ ipcRenderer.on('load_res', function(evt, arg) {
     return;
   console.log('result:', arg);
   result = arg;
-  $('#range').attr('max', result.length - 1);
-  $('#range').off('input');
-  $('#range').on('input', evt => {
-    let r = result[evt.target.value];
-    $('#text-left-sensor').val(r.sensors.left.val);
-    $('#text-center-sensor').val(r.sensors.center.val);
-    $('#text-right-sensor').val(r.sensors.right.val);
-    $('step').html(evt.target.value);
-    drawStep(parseInt(evt.target.value));
-  })
-  $('#draw-result').svg({onLoad: () => drawStep(0)});
-  drawStep(0)
-});
-
-ipcRenderer.on('start_res', function(evt, arg) {
-  if (!arg)
-    return;
-  console.log('result:', arg);
-  result = arg;
-  $('#btnStart').removeClass('disabled');
+  $('#btnPlay').removeClass('disabled');
   $('#btnPath').removeClass('disabled');
   $('#range').attr('max', result.length - 1);
   $('#range').off('input');
@@ -255,14 +270,60 @@ ipcRenderer.on('start_res', function(evt, arg) {
   drawStep(0);
 });
 
-$('#btnStart').click(function () {
-  if(!$(this).hasClass('disabled'))
-    updateResult();
+ipcRenderer.on('loadParams_res', function(evt, arg) {
+  $('#btnTrain').removeClass('disabled');
+  $('#btnTrain').html('Train');
+  $('#btnSaveParams').removeClass('disabled');
+  $('#btnLoadParams').removeClass('disabled');
+  $('#btnPlay').removeClass('disabled');
+  $('#btnPath').removeClass('disabled');
+  console.log(arg);
+  ipcRenderer.send('start', $('#select-mode').val());
+});
+
+ipcRenderer.on('start_res', function(evt, arg) {
+  if (!arg)
+    return;
+  console.log('result:', arg);
+  result = arg;
+  $('#btnPlay').removeClass('disabled');
+  $('#btnPath').removeClass('disabled');
+  $('#btnSavePath4D').removeClass('disabled');
+  $('#btnSavePath6D').removeClass('disabled');
+  $('.row-sensors').removeClass('d-none');
+  $('.row-step').removeClass('d-none');
+  $('#range').attr('max', result.length - 1);
+  $('#range').off('input');
+  $('#range').on('input', evt => {
+    let r = result[evt.target.value];
+    $('#text-left-sensor').val(r.sensors.left.val);
+    $('#text-center-sensor').val(r.sensors.center.val);
+    $('#text-right-sensor').val(r.sensors.right.val);
+    $('step').html(evt.target.value);
+    drawStep(parseInt(evt.target.value));
+  })
+  $('#draw-result').svg({onLoad: () => drawStep(0)});
+  drawStep(0);
+});
+
+$('#btnPlay').click(function () {
+  updateResult();
 });
 
 $('#btnPath').click(function() {
-  if(!$(this).hasClass('disabled'))
-    updateResult('path');
+  updateResult('path');
+});
+
+$('#btnSavePath4D').click(function() {
+  ipcRenderer.send('savePath4D');
+});
+
+$('#btnSavePath6D').click(function() {
+  ipcRenderer.send('savePath6D');
+});
+
+$('#btnSaveParams').click(function() {
+  ipcRenderer.send('saveParams');
 });
 
 $('#inputFile-case').change(function () {
@@ -278,30 +339,44 @@ $('#inputFile-train').change(function() {
     let inputFile = $(this).prop('files')[0];
     $(this).val('');
     readTrain(inputFile.path, inputFile.name);
-    $('#btnStart').addClass('disabled');
+    $('#btnPlay').addClass('disabled');
     $('#btnPath').addClass('disabled');
   }
 });
 
-$('#inputFile-load').change(function() {
+$('#inputFile-loadPath').change(function() {
   if ($(this).prop('files')[0]) {
     let inputFile = $(this).prop('files')[0];
     $(this).val('');
-    loadFile(inputFile.path, inputFile.name);
+    loadPath(inputFile.path, inputFile.name);
+  }
+});
+
+$('#inputFile-loadParams').change(function() {
+  if ($(this).prop('files')[0]) {
+    let inputFile = $(this).prop('files')[0];
+    $(this).val('');
+    loadParams(inputFile.path, inputFile.name);
   }
 });
 
 $('#select-mode').change(function() {
   let mode = $('#select-mode').val();
-  $('#btnStart').addClass('disabled');
+  reset();
+  $('#btnPlay').addClass('disabled');
   $('#btnPath').addClass('disabled');
+  $('#btnSaveParams').addClass('disabled');
+  $('#btnSavePath4D').addClass('disabled');
+  $('#btnSavePath6D').addClass('disabled');
   switch (mode) {
     case 'fuzzy':
       $('#row-train').addClass('d-none');
+      $('#row-train-cfg').addClass('d-none');
       ipcRenderer.send('start', $('#select-mode').val());
       break;
     default:
       $('#row-train').removeClass('d-none');
+      $('#row-train-cfg').removeClass('d-none');
       break;
   }
 });
@@ -318,18 +393,6 @@ fs.readdir(path_case, function(err, items) {
   });
 });
 
-fs.readdir(path_save, function(err, items) {
-  items.forEach(item => {
-    let $dropdown_item_load = $($.parseHTML('<a class="dropdown-item dropdown-item-load" href="#" filename="' + item + '" filepath="' + path.join(path_save, item) + '">' + item.slice(0, -4) + '</a>'));
-    $dropdown_item_load.click(function() {
-      let filename = $(this).attr('filename');
-      let filepath = $(this).attr('filepath');
-      loadFile(filepath, filename);
-    });
-    $('#dropdown-menu-load').append($dropdown_item_load);
-  });
-});
-
 fs.readdir(path_dataset, function(err, items) {
   items.forEach(item => {
     let $dropdown_item_train = $($.parseHTML('<a class="dropdown-item dropdown-item-train" href="#" filename="' + item + '" filepath="' + path.join(path_dataset, item) + '">' + item.slice(0, -4) + '</a>'));
@@ -337,7 +400,7 @@ fs.readdir(path_dataset, function(err, items) {
       let filename = $(this).attr('filename');
       let filepath = $(this).attr('filepath');
       readTrain(filepath, filename);
-      $('#btnStart').addClass('disabled');
+      $('#btnPlay').addClass('disabled');
       $('#btnPath').addClass('disabled');
     });
     $('#dropdown-menu-train').append($dropdown_item_train);

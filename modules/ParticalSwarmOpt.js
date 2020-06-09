@@ -1,5 +1,5 @@
 class ParticalSwarmOpt{
-  constructor(cfg={iter: 256, size: 500, phi1: 0.5, phi2: 0.5, neighbors: 50, vMax: 0.5}, predict, J) {
+  constructor(cfg={iter: 10, size: 128, phi1: 0.5, phi2: 0.5, neighbors: 10, vMax: 0.5}, predict, J) {
     this.cfg = cfg;
     this.predict = predict;
     this.J = J;

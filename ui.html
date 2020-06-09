@@ -22,11 +22,12 @@
       <div class="col">
         <div class="input-group">
           <div class="input-group-prepend">
-              <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                Case
-              </button>
-              <div id="dropdown-menu-case" class="dropdown-menu">
-              </div>
+            <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton"
+              data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              Case
+            </button>
+            <div id="dropdown-menu-case" class="dropdown-menu">
+            </div>
           </div>
           <div class="custom-file">
             <input type="file" class="custom-file-input inputFile" id="inputFile-case">
@@ -34,23 +35,11 @@
           </div>
         </div>
       </div>
-    </div>
-
-    <div class="row align-items-center">
-      <div class="col">
-        <div class="input-group">
-          <div class="input-group-prepend">
-              <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                Load
-              </button>
-              <div id="dropdown-menu-load" class="dropdown-menu">
-              </div>
-          </div>
-          <div class="custom-file">
-            <input type="file" class="custom-file-input inputFile" id="inputFile-load">
-            <label class="custom-file-label" id="inputFile-label-load"></label>
-          </div>
-        </div>
+      <div class="col-2">
+        <label id="btnLoadPath" class="btn btn-secondary btn-block m-0 text-nowrap">
+          Load Path
+          <input type="file" id="inputFile-loadPath" hidden>
+        </label>
       </div>
     </div>
 
@@ -63,8 +52,51 @@
           <select class="custom-select" id="select-mode">
             <option value="fuzzy" selected>Fuzzy</option>
             <option value="gene">Genetic Algorithm</option>
-            <option value="pso">PSO</option>
+            <!-- <option value="pso">PSO</option> -->
           </select>
+        </div>
+      </div>
+    </div>
+
+    <div class="row align-items-center d-none" id='row-train-cfg'>
+      <div class="col">
+        <div class="input-group">
+          <div class="input-group-prepend">
+            <div class="input-group-text">J</div>
+          </div>
+          <input type="text" class="form-control bg-light" id="cfg-j" value="3">
+        </div>
+      </div>
+      <div class="col">
+        <div class="input-group">
+          <div class="input-group-prepend">
+            <div class="input-group-text">Iter</div>
+          </div>
+          <input type="text" class="form-control bg-light" id="cfg-iter" value="128">
+        </div>
+      </div>
+      <div class="col">
+        <div class="input-group">
+          <div class="input-group-prepend">
+            <div class="input-group-text">Size</div>
+          </div>
+          <input type="text" class="form-control bg-light" id="cfg-size" value="256">
+        </div>
+      </div>
+      <div class="col">
+        <div class="input-group">
+          <div class="input-group-prepend">
+            <div class="input-group-text">Mutate</div>
+          </div>
+          <input type="text" class="form-control bg-light" id="cfg-mutate" value="0.66">
+        </div>
+      </div>
+      <div class="col">
+        <div class="input-group">
+          <div class="input-group-prepend">
+            <div class="input-group-text">Crosover</div>
+          </div>
+          <input type="text" class="form-control bg-light" id="cfg-crossover" value="0.33">
         </div>
       </div>
     </div>
@@ -73,17 +105,29 @@
       <div class="col">
         <div class="input-group">
           <div class="input-group-prepend">
-              <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                Train set
-              </button>
-              <div id="dropdown-menu-train" class="dropdown-menu">
-              </div>
+            <button class="btn btn-secondary dropdown-toggle text-nowrap" type="button" id="dropdownMenuButton"
+              data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              Train set
+            </button>
+            <div id="dropdown-menu-train" class="dropdown-menu">
+            </div>
           </div>
           <div class="custom-file">
             <input type="file" class="custom-file-input inputFile" id="inputFile-train">
             <label class="custom-file-label" id="inputFile-label-train"></label>
           </div>
         </div>
+      </div>
+      <div class="col-2">
+        <button id="btnSaveParams" class="btn btn-secondary btn-block disabled text-nowrap" type="button">
+          Save Params
+        </button>
+      </div>
+      <div class="col-2">
+        <label id="btnLoadParams" class="btn btn-secondary btn-block m-0 text-nowrap">
+          Load Params
+          <input type="file" id="inputFile-loadParams" hidden>
+        </label>
       </div>
       <div class="col-2">
         <button id="btnTrain" class="btn btn-primary btn-block" type="button">
@@ -93,62 +137,72 @@
     </div>
 
     <div class="row align-items-center justify-content-end">
+      <div class="col-auto">
+        <button id="btnSavePath4D" class="btn btn-secondary btn-block disabled text-nowrap" type="button">
+          Save Path (4D)
+        </button>
+      </div>
+      <div class="col-auto">
+        <button id="btnSavePath6D" class="btn btn-secondary btn-block disabled text-nowrap" type="button">
+          Save Path (6D)
+        </button>
+      </div>
       <div class="col-2">
         <button id="btnPath" class="btn btn-secondary btn-block disabled" type="button">
           Path
         </button>
       </div>
       <div class="col-2">
-        <button id="btnStart" class="btn btn-primary btn-block disabled" type="button">
-          Start
+        <button id="btnPlay" class="btn btn-primary btn-block disabled" type="button">
+          Play
         </button>
       </div>
     </div>
 
-    <div class="row">
-        <div class="col">
-            <h5>Sensors</h5>
-        </div>
+    <div class="row row-sensors">
+      <div class="col">
+        <h5>Sensors</h5>
+      </div>
     </div>
-    <div class="row m-0" id='row-sensors'>
-        <div class="col">
-            <div class="input-group">
-                <div class="input-group-prepend">
-                    <div class="input-group-text">Left</div>
-                </div>
-                <input type="text" class="form-control bg-light" id="text-left-sensor" readonly>
-            </div>
+    <div class="row m-0 row-sensors" id='row-sensors'>
+      <div class="col">
+        <div class="input-group">
+          <div class="input-group-prepend">
+            <div class="input-group-text">Left</div>
+          </div>
+          <input type="text" class="form-control bg-light" id="text-left-sensor" readonly>
         </div>
-        <div class="col">
-            <div class="input-group">
-                <div class="input-group-prepend">
-                    <div class="input-group-text">Center</div>
-                </div>
-                <input type="text" class="form-control bg-light" id="text-center-sensor" readonly>
-            </div>
+      </div>
+      <div class="col">
+        <div class="input-group">
+          <div class="input-group-prepend">
+            <div class="input-group-text">Center</div>
+          </div>
+          <input type="text" class="form-control bg-light" id="text-center-sensor" readonly>
         </div>
-        <div class="col">
-            <div class="input-group">
-                <div class="input-group-prepend">
-                    <div class="input-group-text">Right</div>
-                </div>
-                <input type="text" class="form-control bg-light" id="text-right-sensor" readonly>
-            </div>
+      </div>
+      <div class="col">
+        <div class="input-group">
+          <div class="input-group-prepend">
+            <div class="input-group-text">Right</div>
+          </div>
+          <input type="text" class="form-control bg-light" id="text-right-sensor" readonly>
         </div>
+      </div>
     </div>
 
-    <div class="row">
-        <div class="col">
-            <h5>Step</h5>
-        </div>
+    <div class="row row-step">
+      <div class="col">
+        <h5>Step</h5>
+      </div>
     </div>
-    <div class="row m-0">
-        <div class="col-1 d-flex align-items-center justify-content-center" id="col-range">
-            <h5 id="step" class='m-0'>1</h5>
-        </div>
-        <div class="col d-flex align-items-center p-0" id="col-range">
-            <input type="range" class="custom-range w-100" id="range" min="0">
-        </div>
+    <div class="row m-0 row-step">
+      <div class="col-1 d-flex align-items-center justify-content-center" id="col-range">
+        <h5 id="step" class='m-0'>1</h5>
+      </div>
+      <div class="col d-flex align-items-center p-0" id="col-range">
+        <input type="range" class="custom-range w-100" id="range" min="0">
+      </div>
     </div>
 
     <div class="row">

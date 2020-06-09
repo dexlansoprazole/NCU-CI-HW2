@@ -1,7 +1,8 @@
 const {range} = require('lodash');
 class Fuzzy{
-  constructor(SENSOR_LENGTH = {center: 5, left: 9, right: 9}) {
+  constructor(SENSOR_LENGTH = {center: 8, left: 12, right: 12}) {
     this.SENSOR_LENGTH = SENSOR_LENGTH;
+    this.CAR_SIZE = 3;
     this.operations = {
       and: (...funcs) => {
         return (v) => {
@@ -17,25 +18,25 @@ class Fuzzy{
   
     this.membershipFuncs = {
       centerIsClose: (center) => {
-        if (center <= 0)
+        if (center <= this.CAR_SIZE)
           return 1;
-        if (center > 0 && center <= this.SENSOR_LENGTH.center)
+        if (center > this.CAR_SIZE && center <= this.SENSOR_LENGTH.center)
           return -center / this.SENSOR_LENGTH.center + 1;
         if (center > this.SENSOR_LENGTH.center)
           return 0;
       },
       leftIsClose: (left) => {
-        if (left <= 0)
+        if (left <= this.CAR_SIZE)
           return 1;
-        if (left > 0 && left <= this.SENSOR_LENGTH.left)
+        if (left > this.CAR_SIZE && left <= this.SENSOR_LENGTH.left)
           return -left / this.SENSOR_LENGTH.left + 1;
         if (left > this.SENSOR_LENGTH.left)
           return 0;
       },
       rightIsClose: (right) => {
-        if (right <= 0)
+        if (right <= this.CAR_SIZE)
           return 1;
-        if (right > 0 && right <= this.SENSOR_LENGTH.right)
+        if (right > this.CAR_SIZE && right <= this.SENSOR_LENGTH.right)
           return -right / this.SENSOR_LENGTH.right + 1;
         if (right > this.SENSOR_LENGTH.right)
           return 0;
